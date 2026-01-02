@@ -1,8 +1,7 @@
 import { Textarea } from '@mantine/core';
 import { useCallback, useState, type ChangeEvent, type JSX } from 'react';
 import classes from './Raw.module.scss';
-import { decryptedDataStringAtom, encryptedDataAtom } from './store';
-import { useAtom, useAtomValue } from 'jotai';
+import { decryptedDataString, encryptedData } from './store';
 
 const PLACEHOLDER = JSON.stringify(
     [
@@ -16,23 +15,17 @@ const ROWS = 10;
 
 export function Raw(): JSX.Element {
     const [error, setError] = useState<string | undefined>(undefined);
-    const [decryptedDataString, setDecryptedDataString] = useAtom(decryptedDataStringAtom);
-    const encryptedData = useAtomValue(encryptedDataAtom);
 
     const handleDecryptedDataOnChange = useCallback(
         (event: ChangeEvent<HTMLTextAreaElement>) => {
-            const value: string = event.target.value;
-            const run = async (): Promise<void> => {
-                try {
-                    setError(undefined);
-                    await setDecryptedDataString(value);
-                } catch (err) {
-                    setError(`${err}`);
-                }
-            };
-            void run();
+            try {
+                setError(undefined);
+                decryptedDataString.value = event.target.value;
+            } catch (err) {
+                setError(`${err}`);
+            }
         },
-        [setError, setDecryptedDataString]
+        [setError]
     );
 
     return (
@@ -45,7 +38,7 @@ export function Raw(): JSX.Element {
                 }}
                 label="JSON"
                 placeholder={PLACEHOLDER}
-                value={decryptedDataString}
+                value={decryptedDataString.value}
                 error={error}
                 onChange={(e) => {
                     handleDecryptedDataOnChange(e);
@@ -60,7 +53,7 @@ export function Raw(): JSX.Element {
                     },
                 }}
                 label="Encrypted Data"
-                value={encryptedData}
+                value={encryptedData.value}
                 readOnly={true}
                 rows={ROWS}
             />

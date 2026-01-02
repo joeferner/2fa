@@ -1,6 +1,7 @@
-import { atom } from 'jotai';
-import { decryptData, encryptData, generateTOTP, TOTP_TIME_STEP_SECONDS } from './utils/encrypt.utils';
-import { atomWithStorage } from 'jotai/utils';
+import { decryptData, encryptData, generateTOTP } from './utils/encrypt.utils';
+import { signal, effect } from '@preact/signals-react';
+
+export const LOCAL_STORAGE_PASSWORD_KEY = 'password';
 
 export interface Key {
     name: string;
@@ -12,64 +13,88 @@ export interface KeyWithTOTP extends Key {
     error?: string;
 }
 
-export const storedPasswordAtom = atomWithStorage('password', '');
+export async function initializeStore(): Promise<void> {
+    console.log('loading 2fa data');
+    const response = await fetch('2fa.dat');
+    const text = (await response.text()).replaceAll(/\s+/g, '');
+    encryptedData.value = text;
+}
 
-export const encryptedDataAtom = atom('');
+export const encryptedData = signal('');
+export const keys = signal<KeyWithTOTP[] | undefined>(undefined);
+export const decryptError = signal<string | undefined>(undefined);
+export const decryptedDataString = signal('');
+export const timeLeft = signal(0);
+export const password = signal(localStorage.getItem(LOCAL_STORAGE_PASSWORD_KEY) ?? '');
 
-export const keysAtom = atom<KeyWithTOTP[] | undefined>(undefined);
-export const decryptErrorAtom = atom<string | undefined>(undefined);
+// update encrypted data on decryptedDataString change
+effect(() => {
+    async function updateEncryptedData(password: string, newValue: string): Promise<void> {
+        encryptedData.value = splitIntoLines(await encryptData(password, newValue), 80);
+    }
 
-export const decryptedDataStringAtom = atom('', async (get, set, newValue: string) => {
-    await set(decryptedDataStringAtom, newValue);
-    if (newValue.trim().length > 0) {
-        const verifiedNewValue = JSON.stringify(JSON.parse(newValue));
-        const password = get(passwordAtom);
-        const encryptedData = splitIntoLines(await encryptData(password, verifiedNewValue), 80);
-        set(encryptedDataAtom, encryptedData);
+    if (decryptedDataString.value.trim().length > 0) {
+        const verifiedNewValue = JSON.stringify(JSON.parse(decryptedDataString.value));
+        void updateEncryptedData(password.value, verifiedNewValue);
     }
 });
 
-export const timeLeftAtom = atom(TOTP_TIME_STEP_SECONDS, async (get, set, newValue: number) => {
-    const lastValue = get(timeLeftAtom);
-    if (newValue > lastValue) {
-        const keys = get(keysAtom);
-        if (keys) {
-            set(keysAtom, await toKeysWithTOTPs(keys));
-        }
+// update keys on timeLeft change
+let previousTimeLeft = 0;
+effect(() => {
+    async function updateTOTPs(newKeys: KeyWithTOTP[]): Promise<void> {
+        keys.value = await toKeysWithTOTPs(newKeys);
     }
-    await set(timeLeftAtom, newValue);
+
+    if (timeLeft.value > previousTimeLeft && keys.value) {
+        void updateTOTPs(keys.value);
+    }
+    previousTimeLeft = timeLeft.value;
 });
 
-export const passwordAtom = atom('', async (get, set, newValue: string) => {
-    if (newValue.trim().length === 0) {
-        await set(passwordAtom, newValue);
+// decrypt keys on password or encryptedData change
+let _passwordValue = '';
+let _encryptedDataValue = '';
+effect(() => {
+    const passwordValue = password.value.trim();
+    const encryptedDataValue = encryptedData.value.trim();
+    if (passwordValue.length === 0) {
+        decryptError.value = 'Password required';
+        return;
+    }
+    if (encryptedDataValue.length === 0) {
+        decryptError.value = 'Missing encrypted data';
         return;
     }
 
-    let encryptedData = get(encryptedDataAtom);
-    if (encryptedData === '') {
-        console.log('loading 2fa data');
-        const response = await fetch('2fa.dat');
-        const text = (await response.text()).replaceAll(/\s+/g, '');
-        encryptedData = text;
-        set(encryptedDataAtom, text);
+    if (_passwordValue !== passwordValue) {
+        _passwordValue = passwordValue;
     }
 
-    try {
-        const decryptedData = await decryptData(newValue, encryptedData);
-        const keys = JSON.parse(decryptedData) as Key[];
-        await set(passwordAtom, newValue);
-        await set(decryptedDataStringAtom, JSON.stringify(keys, null, 2));
-        set(keysAtom, await toKeysWithTOTPs(keys));
-        set(storedPasswordAtom, newValue);
-        set(decryptErrorAtom, undefined);
-    } catch (err) {
-        await set(passwordAtom, newValue);
-        console.error('failed to decrypt data', err);
-        set(keysAtom, undefined);
-        await set(decryptedDataStringAtom, '');
-        set(decryptErrorAtom, 'Failed to decrypt data');
+    if (_encryptedDataValue !== encryptedDataValue) {
+        _encryptedDataValue = encryptedDataValue;
     }
+
+    async function decryptKeys(password: string, encryptedData: string): Promise<void> {
+        try {
+            const decryptedData = await decryptData(password, encryptedData);
+            const decryptedKeys = JSON.parse(decryptedData) as Key[];
+            const newDecryptedDataString = JSON.stringify(decryptedKeys, null, 2);
+            const newKeys = await toKeysWithTOTPs(decryptedKeys);
+
+            localStorage.setItem(LOCAL_STORAGE_PASSWORD_KEY, password);
+            keys.value = newKeys;
+            decryptedDataString.value = newDecryptedDataString;
+            decryptError.value = undefined;
+        } catch (err) {
+            console.error('failed to decrypt data', err);
+            keys.value = undefined;
+            decryptedDataString.value = '';
+            decryptError.value = `Failed to decrypt data: ${err}`;
+        }
+    }
+
+    void decryptKeys(passwordValue, encryptedDataValue);
 });
 
 export async function toKeysWithTOTPs(keys: Key[]): Promise<KeyWithTOTP[]> {

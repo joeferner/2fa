@@ -2,15 +2,20 @@ import { Accordion, Card, ColorSchemeScript, MantineProvider } from '@mantine/co
 import './App.module.scss';
 import '@mantine/core/styles.css';
 import classes from './App.module.scss';
-import { useCallback, useState, type JSX } from 'react';
+import { useCallback, useEffect, useState, type JSX } from 'react';
 import { Raw } from './Raw';
 import { Keys } from './Keys';
 import { Notifications } from '@mantine/notifications';
 import '@mantine/notifications/styles.css';
 import { Password } from './Password';
+import { initializeStore } from './store';
 
 export function App(): JSX.Element {
     const [openAccordions, setOpenAccordions] = useState<string[]>(['keys']);
+
+    useEffect(() => {
+        void initializeStore();
+    }, []);
 
     const handleChange = useCallback(
         (newValue: string[]) => {

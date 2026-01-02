@@ -15,7 +15,8 @@
     "@mantine/core": "^8.3.10",
     "@mantine/hooks": "^8.3.10",
     "@mantine/notifications": "^8.3.10",
-    "jotai": "^2.16.1",
+    "@preact/signals-react": "^3.6.1",
+    "@preact/signals-react-transform": "^0.6.0",
     "react": "^19.2.0",
     "react-bootstrap-icons": "^1.11.6",
     "react-dom": "^19.2.0"

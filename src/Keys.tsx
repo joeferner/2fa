@@ -1,40 +1,44 @@
-import { useAtom, useAtomValue } from 'jotai';
-import { keysAtom, timeLeftAtom, type KeyWithTOTP } from './store';
+import { decryptError, keys, timeLeft, type KeyWithTOTP } from './store';
 import { useCallback, useEffect, type JSX } from 'react';
 import classes from './Keys.module.scss';
-import { ActionIcon, Progress } from '@mantine/core';
+import { ActionIcon, Notification, Progress } from '@mantine/core';
 import { Copy as CopyIcon } from 'react-bootstrap-icons';
 import { notifications } from '@mantine/notifications';
 import { getTOTPRemainingMs, TOTP_TIME_STEP_SECONDS } from './utils/encrypt.utils';
 
 export function Keys(): JSX.Element | null {
-    const keys = useAtomValue(keysAtom);
-    const [timeLeft, setTimeLeft] = useAtom(timeLeftAtom);
-
     useEffect(() => {
         const interval = setInterval(() => {
             const newTimeLeft = getTOTPRemainingMs();
-            void setTimeLeft(newTimeLeft);
+            timeLeft.value = newTimeLeft;
         }, 100);
 
         return (): void => {
             clearInterval(interval);
         };
-    }, [setTimeLeft]);
+    }, []);
 
-    if (!keys) {
+    if (decryptError.value) {
+        return (
+            <Notification color="red" title="Error" withCloseButton={false}>
+                {decryptError.value}
+            </Notification>
+        );
+    }
+
+    if (!keys.value) {
         return null;
     }
 
     return (
         <div className={classes.keys}>
             <div>
-                {keys.map((key) => (
+                {keys.value.map((key) => (
                     <Key key={key.name} keyWithTOTP={key} />
                 ))}
             </div>
 
-            <Progress value={(timeLeft / (TOTP_TIME_STEP_SECONDS * 1000)) * 100} />
+            <Progress value={(timeLeft.value / (TOTP_TIME_STEP_SECONDS * 1000)) * 100} />
         </div>
     );
 }
