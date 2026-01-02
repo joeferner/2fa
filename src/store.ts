@@ -27,18 +27,6 @@ export const decryptedDataString = signal('');
 export const timeLeft = signal(0);
 export const password = signal(localStorage.getItem(LOCAL_STORAGE_PASSWORD_KEY) ?? '');
 
-// update encrypted data on decryptedDataString change
-effect(() => {
-    async function updateEncryptedData(password: string, newValue: string): Promise<void> {
-        encryptedData.value = splitIntoLines(await encryptData(password, newValue), 80);
-    }
-
-    if (decryptedDataString.value.trim().length > 0) {
-        const verifiedNewValue = JSON.stringify(JSON.parse(decryptedDataString.value));
-        void updateEncryptedData(password.value, verifiedNewValue);
-    }
-});
-
 // update keys on timeLeft change
 let previousTimeLeft = 0;
 effect(() => {
@@ -52,9 +40,22 @@ effect(() => {
     previousTimeLeft = timeLeft.value;
 });
 
+// update encrypted data on decryptedDataString change
+effect(() => {
+    const decryptedDataStringValue = decryptedDataString.value;
+    const passwordValue = password.value;
+
+    async function updateEncryptedData(password: string, decryptedDataString: string): Promise<void> {
+        if (decryptedDataString.trim().length > 0) {
+            const verifiedNewValue = JSON.stringify(JSON.parse(decryptedDataString));
+            encryptedData.value = splitIntoLines(await encryptData(password, verifiedNewValue), 80);
+        }
+    }
+
+    void updateEncryptedData(passwordValue, decryptedDataStringValue);
+});
+
 // decrypt keys on password or encryptedData change
-let _passwordValue = '';
-let _encryptedDataValue = '';
 effect(() => {
     const passwordValue = password.value.trim();
     const encryptedDataValue = encryptedData.value.trim();
@@ -65,14 +66,6 @@ effect(() => {
     if (encryptedDataValue.length === 0) {
         decryptError.value = 'Missing encrypted data';
         return;
-    }
-
-    if (_passwordValue !== passwordValue) {
-        _passwordValue = passwordValue;
-    }
-
-    if (_encryptedDataValue !== encryptedDataValue) {
-        _encryptedDataValue = encryptedDataValue;
     }
 
     async function decryptKeys(password: string, encryptedData: string): Promise<void> {
