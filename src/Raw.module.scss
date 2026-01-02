@@ -1,0 +1,9 @@
+.rawWrapper {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+
+    div {
+        flex-grow: 1;
+    }
+}

@@ -1,0 +1,4 @@
+FROM mcr.microsoft.com/devcontainers/javascript-node:24
+
+RUN apt-get update
+
