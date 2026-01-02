@@ -1,10 +1,11 @@
-import { decryptError, keys, timeLeft, type KeyWithTOTP } from './store';
+import { decryptError, keys, logout, timeLeft, type KeyWithTOTP } from './store';
 import { useCallback, useEffect, type JSX } from 'react';
 import classes from './Keys.module.scss';
-import { ActionIcon, Notification, Progress } from '@mantine/core';
+import { ActionIcon, Button, Progress } from '@mantine/core';
 import { Copy as CopyIcon } from 'react-bootstrap-icons';
 import { notifications } from '@mantine/notifications';
 import { getTOTPRemainingMs, TOTP_TIME_STEP_SECONDS } from './utils/encrypt.utils';
+import { DecryptError } from './DecryptError';
 
 export function Keys(): JSX.Element | null {
     useEffect(() => {
@@ -18,12 +19,12 @@ export function Keys(): JSX.Element | null {
         };
     }, []);
 
+    const handleLogoutClick = useCallback(() => {
+        logout();
+    }, []);
+
     if (decryptError.value) {
-        return (
-            <Notification color="red" title="Error" withCloseButton={false}>
-                {decryptError.value}
-            </Notification>
-        );
+        return <DecryptError error={decryptError.value} />;
     }
 
     if (!keys.value) {
@@ -39,6 +40,9 @@ export function Keys(): JSX.Element | null {
             </div>
 
             <Progress value={(timeLeft.value / (TOTP_TIME_STEP_SECONDS * 1000)) * 100} />
+            <div className={classes.actions}>
+                <Button onClick={handleLogoutClick}>Logout</Button>
+            </div>
         </div>
     );
 }

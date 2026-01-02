@@ -7,7 +7,6 @@ import { Raw } from './Raw';
 import { Keys } from './Keys';
 import { Notifications } from '@mantine/notifications';
 import '@mantine/notifications/styles.css';
-import { Password } from './Password';
 import { initializeStore } from './store';
 
 export function App(): JSX.Element {
@@ -35,8 +34,6 @@ export function App(): JSX.Element {
                 <div className={classes.main}>
                     <Card shadow="sm" p="lg" radius="md" withBorder>
                         <Card.Section>
-                            <Password />
-
                             <Accordion value={openAccordions} onChange={handleChange} multiple>
                                 <Accordion.Item value="keys">
                                     <Accordion.Control>Keys</Accordion.Control>

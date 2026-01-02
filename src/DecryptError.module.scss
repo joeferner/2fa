@@ -1,14 +1,8 @@
-.rawWrapper {
-    display: flex;
-    flex-direction: row;
-    gap: 10px;
+.wrapper {
+    margin: 10px;
+    width: 400px;
 
-    div {
-        flex-grow: 1;
-        flex-basis: 50%;
-    }
-
-    .decrypted {
+    .decryptWrapper {
         display: flex;
         flex-direction: column;
         gap: 5px;

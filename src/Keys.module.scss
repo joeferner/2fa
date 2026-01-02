@@ -3,6 +3,11 @@
     flex-direction: column;
     gap: 10px;
     width: 400px;
+
+    .actions {
+        display: flex;
+        justify-content: end;
+    }
 }
 
 .key {
