@@ -58,18 +58,18 @@ export const passwordAtom = atom('', async (get, set, newValue: string) => {
     try {
         const decryptedData = await decryptData(newValue, encryptedData);
         const keys = JSON.parse(decryptedData) as Key[];
+        await set(passwordAtom, newValue);
         await set(decryptedDataStringAtom, JSON.stringify(keys, null, 2));
         set(keysAtom, await toKeysWithTOTPs(keys));
         set(storedPasswordAtom, newValue);
         set(decryptErrorAtom, undefined);
     } catch (err) {
+        await set(passwordAtom, newValue);
         console.error('failed to decrypt data', err);
         set(keysAtom, undefined);
         await set(decryptedDataStringAtom, '');
         set(decryptErrorAtom, 'Failed to decrypt data');
     }
-
-    await set(passwordAtom, newValue);
 });
 
 export async function toKeysWithTOTPs(keys: Key[]): Promise<KeyWithTOTP[]> {
